@@ -81,8 +81,11 @@ def svm_loss_vectorized(W, X, y, reg):
   num_classes = W.shape[1]
   num_train = X.shape[0]
  
+  # Calculate scores for each classifier (column in the weight matrix W)
+  # acting on each training sample (row in X)
   scores = X.dot(W)
 
+  # Find the correct classifier scores for each training sample
   #
   # It took me forever to figure this out, but the Matlab equivalent of
   # the following is:
@@ -91,14 +94,21 @@ def svm_loss_vectorized(W, X, y, reg):
   # 
   correct_class_scores = scores[np.arange(num_train), y]
 
+  # Find the margin by which each classifier exceeds
+  # the score of the correct classifier for each training sample
+  # (there is a delta padding of 1 to force a minimum margin
+  #  when calculating the losses)
   margins = (scores.T - correct_class_scores + 1)
 
-  # Find the losses, i.e. the cases where the classifier
-  # score exceeded the correct classifier score by a 
+  # Calculate the losses for each classifier/sample,
   losses = np.maximum(0, margins)
-  losses[y, range(num_train)] = 0
 
+  # Sum the losses over all the incorrect classifiers
+  # for each sample.
+  losses[y, range(num_train)] = 0
   loss = np.sum(losses)
+
+  # Average over the training samples
   loss /= num_train
   
   # Add regularization to the loss.
