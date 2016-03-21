@@ -44,7 +44,7 @@ def softmax_loss_naive(W, X, y, reg):
     sum_exp_scores = np.sum(exp_scores)
     correct_class_score = scores[y[i]]
     
-    # Update the loss
+    # Update the loss 
     loss -= correct_class_score
     loss += np.log(sum_exp_scores)
 
@@ -89,6 +89,42 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
+
+  num_classes = W.shape[1]
+  num_train = X.shape[0]
+
+  # Calculate scores for each classifier (column in the weight matrix W)
+  # acting on each training sample (row in X)
+  scores = X.dot(W)
+    
+  # Normalization trick to resolve numerical instability
+  # when dealing with the large exponential terms.
+  scores -= np.max(scores)
+
+  # Cache some terms that are used repeatedly.
+  exp_scores = np.exp(scores)
+  sum_exp_scores = np.sum(exp_scores,axis=1)
+
+  # Find the correct classifier scores for each training sample
+  correct_class_scores = scores[np.arange(num_train), y]
+
+  # Update the loss
+  loss = np.sum(-correct_class_scores + np.log(sum_exp_scores))
+
+  # Update the gradient
+  correct_indices = np.zeros(scores.shape)
+  correct_indices[np.arange(num_train), y] = 1
+
+  dW -= correct_indices.T.dot(X).T
+  dW += X.T.dot((exp_scores.T / sum_exp_scores).T)
+  
+  # Average over the training samples
+  loss /= num_train
+  dW /= num_train
+  
+  # Add regularization.
+  loss += 0.5 * reg * np.sum(W * W)
+  dW += reg * W
 
   pass
   #############################################################################
