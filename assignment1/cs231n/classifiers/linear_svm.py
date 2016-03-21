@@ -43,7 +43,6 @@ def svm_loss_naive(W, X, y, reg):
   # to be an average instead so we divide by num_train.
   loss /= num_train
 
-  
   dW /= num_train
 
   # Add regularization to the loss.
