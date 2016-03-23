@@ -74,6 +74,40 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
+
+    # First pad out X with ones
+    X_1 = np.vstack((X.T, np.ones(N))).T
+
+    # And pad out W1 with b1
+    W1_b1 = np.vstack((W1,b1))
+
+    # Then we can perform the bias trick and apply ReLU
+    # to get the hidden layer h1
+    h1 = np.maximum(0, X_1.dot(W1_b1))
+
+    # Pad out the hidden layer with ones
+    h1_1 = np.vstack((h1.T, np.ones(N))).T
+
+    # Pad out W2 with b2
+    W2_b2 = np.vstack((W2,b2))
+  
+    # Get the pre-softmax scores
+    pre_soft_scores = h1_1.dot(W2_b2)
+  
+    # Normalization trick to resolve numerical instability
+    # when dealing with the large exponential terms.
+    # pre_soft_scores -= np.max(pre_soft_scores)
+
+    # Cache intermediate terms
+    # exp_pre_soft_scores = np.exp(pre_soft_scores)
+    # sum_exp_pre_soft_scores = np.sum(exp_pre_soft_scores,axis=0)
+
+    # scores = -np.log(exp_pre_soft_scores / sum_exp_pre_soft_scores)
+
+    scores = pre_soft_scores
+
+    # loss =
+
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
