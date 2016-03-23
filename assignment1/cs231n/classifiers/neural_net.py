@@ -91,23 +91,9 @@ class TwoLayerNet(object):
     # Pad out W2 with b2
     W2_b2 = np.vstack((W2,b2))
   
-    # Get the pre-softmax scores
-    pre_soft_scores = h1_1.dot(W2_b2)
+    # Get the scores
+    scores = h1_1.dot(W2_b2)
   
-    # Normalization trick to resolve numerical instability
-    # when dealing with the large exponential terms.
-    # pre_soft_scores -= np.max(pre_soft_scores)
-
-    # Cache intermediate terms
-    # exp_pre_soft_scores = np.exp(pre_soft_scores)
-    # sum_exp_pre_soft_scores = np.sum(exp_pre_soft_scores,axis=0)
-
-    # scores = -np.log(exp_pre_soft_scores / sum_exp_pre_soft_scores)
-
-    scores = pre_soft_scores
-
-    # loss =
-
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -126,6 +112,30 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
+    
+    # Normalization trick to resolve numerical instability
+    # when dealing with the large exponential terms.
+    scores -= np.max(scores)
+
+    # Cache intermediate terms
+    exp_scores = np.exp(scores)
+    sum_exp_scores = np.sum(exp_scores,axis=1)
+
+    # scores = -np.log(exp_scores / sum_exp_scores)
+  
+    # Find the correct classifier scores for each training sample
+    correct_class_scores = scores[np.arange(N), y]
+
+    # Update the loss
+    loss = np.sum(-correct_class_scores + np.log(sum_exp_scores))
+
+    # Average over the training samples
+    loss /= N
+
+    # Add regularization.
+    loss += 0.5 * reg * np.sum(W1 * W1)
+    loss += 0.5 * reg * np.sum(W2 * W2)
+
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
