@@ -112,22 +112,27 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
+
+    # Prepare for softmax calculation over scores
+    normed_scores = scores
     
     # Normalization trick to resolve numerical instability
     # when dealing with the large exponential terms.
-    scores -= np.max(scores)
+    normed_scores -= np.max(scores)
 
     # Cache intermediate terms
-    exp_scores = np.exp(scores)
+    exp_scores = np.exp(normed_scores)
     sum_exp_scores = np.sum(exp_scores,axis=1)
 
-    # scores = -np.log(exp_scores / sum_exp_scores)
+    # Apply softmax to scores
+    softmax_scores = (exp_scores.T / sum_exp_scores).T
   
     # Find the correct classifier scores for each training sample
-    correct_class_scores = scores[np.arange(N), y]
+    correct_class_scores = softmax_scores[np.arange(N), y]
 
     # Update the loss
-    loss = np.sum(-correct_class_scores + np.log(sum_exp_scores))
+    # loss = np.sum(-correct_class_scores + np.log(sum_exp_scores))
+    loss = np.sum(-np.log(correct_class_scores))
 
     # Average over the training samples
     loss /= N
@@ -148,6 +153,19 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
+  
+    correct_indices = np.zeros(scores.shape)
+    correct_indices[np.arange(num_train), y] = 1
+
+    dsoftmax_scores -= correct_indices.T.dot(X).T
+    dsoftmax_scores += X.T.dot(softmax_scores)
+
+    # dh1 =
+
+    # dW2 =
+
+    # db2 =
+
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
