@@ -155,16 +155,35 @@ class TwoLayerNet(object):
     #############################################################################
   
     correct_indices = np.zeros(scores.shape)
-    correct_indices[np.arange(num_train), y] = 1
+    correct_indices[np.arange(N), y] = 1
 
-    dsoftmax_scores -= correct_indices.T.dot(X).T
-    dsoftmax_scores += X.T.dot(softmax_scores)
+    # Backprop softmax output
+    dscores = np.copy(softmax_scores)
+    dscores[correct_indices.astype(bool)] -= 1
 
-    # dh1 =
+    # Backprop scores = h1_1.dot(W2_b2)
+    dh1_1 = dscores.dot(W2_b2.T)
+    dh1 = dh1_1[:,:-1]
 
-    # dW2 =
+    dW2_b2 = h1_1.T.dot(dscores)
+    dW2 = dW2_b2[:-1,:]
+    db2 = dW2_b2[-1,:]
 
-    # db2 =
+    # Backprop h1 = np.maximum(0, X_1.dot(W1_b1))
+    dX_1_dot_W1_b1 = (X_1.dot(W1_b1) >= 0) * dh1
+    dW1_b1 = X_1.dot(dX_1_dot_W1_b1)
+
+    dW1 = dW1_b1[:-1,:]
+    db1 = dW1_b1[-1,:]
+
+    # Regularize gradients of weights
+    dW1 += reg * W1
+    dW2 += reg * W2
+
+    grads['W1'] = dW1
+    grads['b1'] = db1
+    grads['W2'] = dW2
+    grads['b2'] = db2
 
     pass
     #############################################################################
