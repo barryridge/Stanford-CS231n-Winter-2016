@@ -154,12 +154,14 @@ class TwoLayerNet(object):
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
   
+    # Backprop softmax output
     correct_indices = np.zeros(scores.shape)
     correct_indices[np.arange(N), y] = 1
-
-    # Backprop softmax output
     dscores = np.copy(softmax_scores)
     dscores[correct_indices.astype(bool)] -= 1
+
+    # Average over the training samples
+    dscores /= N
 
     # Backprop scores = h1_1.dot(W2_b2)
     dh1_1 = dscores.dot(W2_b2.T)
@@ -171,7 +173,7 @@ class TwoLayerNet(object):
 
     # Backprop h1 = np.maximum(0, X_1.dot(W1_b1))
     dX_1_dot_W1_b1 = (X_1.dot(W1_b1) >= 0) * dh1
-    dW1_b1 = X_1.dot(dX_1_dot_W1_b1)
+    dW1_b1 = X_1.T.dot(dX_1_dot_W1_b1)
 
     dW1 = dW1_b1[:-1,:]
     db1 = dW1_b1[-1,:]
@@ -180,6 +182,7 @@ class TwoLayerNet(object):
     dW1 += reg * W1
     dW2 += reg * W2
 
+    # Store the gradients
     grads['W1'] = dW1
     grads['b1'] = db1
     grads['W2'] = dW2
