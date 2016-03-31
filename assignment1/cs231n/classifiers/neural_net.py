@@ -232,6 +232,9 @@ class TwoLayerNet(object):
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
+      sample_indices = np.random.choice(num_train, min(num_train,batch_size), replace=False)
+      X_batch = X[sample_indices,:]
+      y_batch = y[sample_indices]
       pass
       #########################################################################
       #                             END OF YOUR CODE                          #
@@ -247,6 +250,10 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
+      self.params['W1'] -= learning_rate * grads['W1']
+      self.params['b1'] -= learning_rate * grads['b1']
+      self.params['W2'] -= learning_rate * grads['W2']
+      self.params['b2'] -= learning_rate * grads['b2']
       pass
       #########################################################################
       #                             END OF YOUR CODE                          #
@@ -292,6 +299,18 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
+
+    # This time we'll do the forward pass without using the bias trick
+
+    # Forward-propagate through the hidden/ReLu layer
+    h1 = np.maximum(0, X.dot(self.params['W1'] + self.params['b1']))
+
+    # Forward-propagate through the softmax layer
+    scores = h1.dot(self.params['W2'] + self.params['b2'])
+
+    # argmax over the scores to find the class predictions
+    y_pred = np.argmax(scores,axis=1)
+
     pass
     ###########################################################################
     #                              END OF YOUR CODE                           #
