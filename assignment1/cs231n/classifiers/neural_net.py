@@ -303,10 +303,10 @@ class TwoLayerNet(object):
     # This time we'll do the forward pass without using the bias trick
 
     # Forward-propagate through the hidden/ReLu layer
-    h1 = np.maximum(0, X.dot(self.params['W1'] + self.params['b1']))
+    h1 = np.maximum(0, X.dot(self.params['W1']) + self.params['b1'])
 
     # Forward-propagate through the softmax layer
-    scores = h1.dot(self.params['W2'] + self.params['b2'])
+    scores = h1.dot(self.params['W2']) + self.params['b2']
 
     # argmax over the scores to find the class predictions
     y_pred = np.argmax(scores,axis=1)
