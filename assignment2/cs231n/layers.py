@@ -53,6 +53,11 @@ def affine_backward(dout, cache):
   #############################################################################
   # TODO: Implement the affine backward pass.                                 #
   #############################################################################
+  x = cache[0]
+  w = cache[1]
+  dx = dout.dot(w.T).reshape(x.shape)
+  dw = x.T.dot(dout).T.reshape(w.T.shape).T
+  db = dout.sum(axis=0)
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
