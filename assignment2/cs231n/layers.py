@@ -56,7 +56,7 @@ def affine_backward(dout, cache):
   x = cache[0]
   w = cache[1]
   dx = dout.dot(w.T).reshape(x.shape)
-  dw = x.T.dot(dout).T.reshape(w.T.shape).T
+  dw = x.reshape(x.shape[0], -1).T.dot(dout)
   db = dout.sum(axis=0)
   pass
   #############################################################################
@@ -80,6 +80,7 @@ def relu_forward(x):
   #############################################################################
   # TODO: Implement the ReLU forward pass.                                    #
   #############################################################################
+  out = np.maximum(0,x)
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
