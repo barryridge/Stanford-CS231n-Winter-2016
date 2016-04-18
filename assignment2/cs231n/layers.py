@@ -175,28 +175,58 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
 
-    # Get minibatch statistics
-    sample_mean = x.mean(axis=0)
-    sample_var = x.var(axis=0)
+    # Step 1:
+    mu = np.sum(x,axis=0) / N
+    
+    # Step 2:
+    x_minus_mu = x - mu
 
-    # Normalize the data
-    x_normed = (x - sample_mean) / np.sqrt(sample_var + eps)
+    # Step 3:
+    x_minus_mu_sq = x_minus_mu ** 2
 
-    # Scale and shift
-    out = (gamma * x_normed) + beta
+    # Step 4:
+    var = np.sum(x_minus_mu_sq,axis=0) / N
 
+    # Step 5:
+    var_plus_e = var + eps
+
+    # Step 6:
+    sqrt_var_plus_e = np.sqrt(var_plus_e)
+
+    # Step 7:
+    inv_sqrt_var_plus_e = 1/sqrt_var_plus_e
+
+    # Step 8:
+    xhat = x_minus_mu * inv_sqrt_var_plus_e
+
+    # Step 9:
+    gamma_xhat = gamma * xhat
+
+    # Step 10:
+    out = gamma_xhat + beta
+
+    
     # Cache stuff for the backward pass
-    cache['x_normed'] = x_normed
+    cache = {}
+    cache['N'] = N
+    cache['D'] = D
     cache['gamma'] = gamma
     cache['beta'] = beta
-    cache['sample_mean'] = sample_mean
-    cache['sample_var'] = sample_var
     cache['eps'] = eps
-    cache['x'] = x
+    cache['mu'] = mu
+    cache['x_minus_mu'] = x_minus_mu
+    cache['x_minus_mu_sq'] = x_minus_mu_sq
+    cache['var'] = var
+    cache['var_plus_e'] = var_plus_e
+    cache['sqrt_var_plus_e'] = sqrt_var_plus_e
+    cache['inv_sqrt_var_plus_e'] = inv_sqrt_var_plus_e
+    cache['xhat'] = xhat
+    cache['gamma_xhat'] = gamma_xhat
+    cache['out'] = out
     
     # Update running mean and variance
-    running_mean = momentum * running_mean + (1 - momentum) * sample_mean
-    running_var = momentum * running_var + (1 - momentum) * sample_var
+    running_mean = momentum * running_mean + (1 - momentum) * mu
+    running_var = momentum * running_var + (1 - momentum) * var
 
     pass
     #############################################################################
@@ -253,17 +283,73 @@ def batchnorm_backward(dout, cache):
   # results in the dx, dgamma, and dbeta variables.                           #
   #############################################################################
 
-  x_normed = cache['x_normed']
+  # Uncache the stuff from the forward pass
+  N = cache['N']
+  D = cache['D']
   gamma = cache['gamma']
   beta = cache['beta']
-  sample_mean = cache['sample_mean']
-  sample_var = cache['sample_var']
   eps = cache['eps']
-  x = cache['x']
+  mu = cache['mu']
+  x_minus_mu = cache['x_minus_mu']
+  x_minus_mu_sq = cache['x_minus_mu_sq']
+  var = cache['var']
+  var_plus_e = cache['var_plus_e']
+  sqrt_var_plus_e = cache['sqrt_var_plus_e']
+  inv_sqrt_var_plus_e = cache['inv_sqrt_var_plus_e']
+  xhat = cache['xhat'] 
+  gamma_xhat = cache['gamma_xhat'] 
+  out = cache['out'] 
   
-  # out = (gamma * x_normed) + beta
-  dx_normed = gamma * dout
+  
+  # Step 10 (out = gamma_xhat + beta):
+  dbeta = 1 * np.sum(dout,axis=0) # (D,)
+  dgamma_xhat = 1 * dout          # (N,D)
 
+  # Step 9 (gamma_xhat = gamma * xhat):
+  dgamma = np.sum(xhat * dgamma_xhat,axis=0)
+  dxhat = gamma * dgamma_xhat
+
+  # Step 8 (xhat = x_minus_mu * inv_sqrt_var_plus_e):
+  dx_minus_mu = inv_sqrt_var_plus_e * dxhat
+  dinv_sqrt_var_plus_e = np.sum(x_minus_mu * dxhat,axis=0)
+
+  # Step 7 (inv_sqrt_var_plus_e = 1/sqrt_var_plus_e):
+  dsqrt_var_plus_e = - (1 / (sqrt_var_plus_e ** 2)) * dinv_sqrt_var_plus_e
+
+  # Step 6 (sqrt_var_plus_e = np.sqrt(var_plus_e)):
+  dvar_plus_e = 0.5 * (1 / np.sqrt(var_plus_e)) * dsqrt_var_plus_e
+
+  # Step 5 (var_plus_e = var + eps)
+  dvar = 1 * dvar_plus_e
+
+  # Step 4 (var = np.sum(x_minus_mu_sq,axis=0) / N):
+  #
+  # Just like with a regular sum gate, the gradient
+  # is evenly distributed across its input.
+  dx_minus_mu_sq = np.ones([N,D])/N * dvar
+
+  # Step 3 (x_minus_mu_sq = x_minus_mu ** 2):
+  dx_minus_mu_2 = 2 * x_minus_mu * dx_minus_mu_sq
+
+  # Step 2 (x_minus_mu = x - mu):
+  #
+  # When two gradients arrive as inputs to a gate
+  # in the backward pass, we add them.
+  dx_1 = 1 * (dx_minus_mu + dx_minus_mu_2)
+  dmu = -1 * np.sum(dx_minus_mu + dx_minus_mu_2,axis=0)
+
+  # Step 1 (mu = np.sum(x,axis=0) / N)
+  #
+  # Again, just distribute the gradient evenly
+  # over the inputs.
+  dx_2 = np.ones([N,D])/N * dmu
+
+  # Step 0 (x)
+  #
+  # Add up the two gradients to get the final gradient
+  # w.r.t. x.
+  dx = dx_1 + dx_2
+  
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
