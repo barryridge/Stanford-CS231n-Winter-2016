@@ -307,11 +307,18 @@ class FullyConnectedNet(object):
                                                                    self.params['gamma' + str(i_layer)],
                                                                    self.params['beta' + str(i_layer)],
                                                                    self.bn_params[i_layer-1])
+            
+            elif self.use_dropout:
+                h_temp, cache_temp = affine_relu_dropout_forward(h[i_layer-1],
+                                                                 self.params['W' + str(i_layer)],
+                                                                 self.params['b' + str(i_layer)],
+                                                                 self.dropout_param)
                 
             else:
                 h_temp, cache_temp = affine_relu_forward(h[i_layer-1],
                                                          self.params['W' + str(i_layer)],
                                                          self.params['b' + str(i_layer)])
+
             h.append(h_temp)
             cache.append(cache_temp)
 
@@ -349,7 +356,7 @@ class FullyConnectedNet(object):
         W = self.params['W' + str(i_layer)]
         loss += 0.5 * self.reg * np.sum(W * W)
 
-    # Do the backwards pass
+    # Do the backward pass
     dh = dscores.copy()
     
     for i_layer in np.arange(self.num_layers, 0, -1):
@@ -365,6 +372,12 @@ class FullyConnectedNet(object):
                 grads['b' + str(i_layer)] = db
                 grads['gamma' + str(i_layer)] = dgamma
                 grads['beta' + str(i_layer)] = dbeta
+
+            elif self.use_dropout:
+                dh, dW, db = affine_relu_dropout_backward(dh, cache[i_layer])
+                grads['W' + str(i_layer)] = dW
+                grads['b' + str(i_layer)] = db
+
             else:
                 dh, dW, db = affine_relu_backward(dh, cache[i_layer])
                 grads['W' + str(i_layer)] = dW
