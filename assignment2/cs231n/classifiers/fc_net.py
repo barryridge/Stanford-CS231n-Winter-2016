@@ -194,7 +194,7 @@ class FullyConnectedNet(object):
     # parameters should be initialized to zero.                                #
     ############################################################################
     
-    # Add the weights + biases for the ReLU layers
+    # Loop through ReLU layers
     for i_layer, hidden_dim in enumerate(hidden_dims):
 
         if i_layer == 0:
@@ -205,6 +205,15 @@ class FullyConnectedNet(object):
         # print 'W%d = (%d, %d)' % (i_layer+1, prev_dim, hidden_dim)
         # print 'b%d = (%d,)' % (i_layer+1, hidden_dim)
 
+        # Store params for a batch norm layer if required
+        if use_batchnorm:
+            # print 'gamma%d = (%d,)' % (i_layer+1, hidden_dim)
+            # print 'beta%d = (%d,)' % (i_layer+1, hidden_dim)
+
+            self.params['gamma' + str(i_layer+1)] = np.ones(hidden_dim)
+            self.params['beta' + str(i_layer+1)] = np.zeros(hidden_dim)
+        
+        # Store params for ReLU layer
         self.params['W' + str(i_layer+1)] = weight_scale * np.random.randn(prev_dim, hidden_dim)
         self.params['b' + str(i_layer+1)] = np.zeros(hidden_dim)
     
@@ -291,9 +300,18 @@ class FullyConnectedNet(object):
             h.append(h_temp)
             cache.append(cache_temp)
         else:
-            h_temp, cache_temp = affine_relu_forward(h[i_layer-1],
-                                                     self.params['W' + str(i_layer)],
-                                                     self.params['b' + str(i_layer)])
+            if self.use_batchnorm:
+                h_temp, cache_temp = affine_batchnorm_relu_forward(h[i_layer-1],
+                                                                   self.params['W' + str(i_layer)],
+                                                                   self.params['b' + str(i_layer)],
+                                                                   self.params['gamma' + str(i_layer)],
+                                                                   self.params['beta' + str(i_layer)],
+                                                                   self.bn_params[i_layer-1])
+                
+            else:
+                h_temp, cache_temp = affine_relu_forward(h[i_layer-1],
+                                                         self.params['W' + str(i_layer)],
+                                                         self.params['b' + str(i_layer)])
             h.append(h_temp)
             cache.append(cache_temp)
 
@@ -341,9 +359,16 @@ class FullyConnectedNet(object):
             grads['W' + str(i_layer)] = dW
             grads['b' + str(i_layer)] = db
         else:
-            dh, dW, db = affine_relu_backward(dh, cache[i_layer])
-            grads['W' + str(i_layer)] = dW
-            grads['b' + str(i_layer)] = db
+            if self.use_batchnorm:
+                dh, dW, db, dgamma, dbeta = affine_batchnorm_relu_backward(dh, cache[i_layer])
+                grads['W' + str(i_layer)] = dW
+                grads['b' + str(i_layer)] = db
+                grads['gamma' + str(i_layer)] = dgamma
+                grads['beta' + str(i_layer)] = dbeta
+            else:
+                dh, dW, db = affine_relu_backward(dh, cache[i_layer])
+                grads['W' + str(i_layer)] = dW
+                grads['b' + str(i_layer)] = db
 
     
     # # Add regularization to the weight gradients
