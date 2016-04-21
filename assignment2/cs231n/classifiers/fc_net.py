@@ -215,12 +215,14 @@ class FullyConnectedNet(object):
         
         # Store params for ReLU layer
         self.params['W' + str(i_layer+1)] = weight_scale * np.random.randn(prev_dim, hidden_dim)
+        # self.params['W' + str(i_layer+1)] = np.sqrt(2.0/prev_dim) * np.random.randn(prev_dim, hidden_dim)
         self.params['b' + str(i_layer+1)] = np.zeros(hidden_dim)
     
     # Add the weights + biases for the final softmax layer
     # print 'W%d = (%d, %d)' % (i_layer+2, hidden_dims[-1], num_classes)
     # print 'b%d = (%d,)' % (i_layer+2, num_classes)
     self.params['W' + str(i_layer+2)] = weight_scale * np.random.randn(hidden_dims[-1], num_classes)
+    # self.params['W' + str(i_layer+2)] = np.sqrt(2.0/prev_dim) * np.random.randn(hidden_dims[-1], num_classes)
     self.params['b' + str(i_layer+2)] = np.zeros(num_classes)
 
 
@@ -313,7 +315,14 @@ class FullyConnectedNet(object):
                                                                  self.params['W' + str(i_layer)],
                                                                  self.params['b' + str(i_layer)],
                                                                  self.dropout_param)
-                
+            elif self.use_batchnorm and self.use_dropout:
+                h_temp, cache_temp = affine_batchnorm_relu_dropout_forward(h[i_layer-1],
+                                                                           self.params['W' + str(i_layer)],
+                                                                           self.params['b' + str(i_layer)],
+                                                                           self.params['gamma' + str(i_layer)],
+                                                                           self.params['beta' + str(i_layer)],
+                                                                           self.bn_params[i_layer-1],
+                                                                           self.dropout_param)
             else:
                 h_temp, cache_temp = affine_relu_forward(h[i_layer-1],
                                                          self.params['W' + str(i_layer)],
@@ -377,6 +386,13 @@ class FullyConnectedNet(object):
                 dh, dW, db = affine_relu_dropout_backward(dh, cache[i_layer])
                 grads['W' + str(i_layer)] = dW
                 grads['b' + str(i_layer)] = db
+            
+            elif self.use_batchnorm and self.use_dropout:
+                dh, dW, db = affine_batchnorm_relu_dropout_backward(dh, cache[i_layer])
+                grads['W' + str(i_layer)] = dW
+                grads['b' + str(i_layer)] = db
+                grads['gamma' + str(i_layer)] = dgamma
+                grads['beta' + str(i_layer)] = dbeta
 
             else:
                 dh, dW, db = affine_relu_backward(dh, cache[i_layer])
