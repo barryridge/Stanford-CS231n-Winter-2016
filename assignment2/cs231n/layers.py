@@ -1,5 +1,5 @@
 import numpy as np
-
+from cs231n import im2col
 
 def affine_forward(x, w, b):
   """
@@ -495,6 +495,37 @@ def conv_forward_naive(x, w, b, conv_param):
   # TODO: Implement the convolutional forward pass.                           #
   # Hint: you can use the function np.pad for padding.                        #
   #############################################################################
+
+  # Unpack params
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  (N, C, H, W) = x.shape
+  (F, C, HH, WW) = w.shape
+
+  # Calculate H' and W'
+  H_ = 1 + (H + 2 * pad - HH) / stride
+  W_ = 1 + (W + 2 * pad - WW) / stride
+
+  # TODO: Add some exception throwing here if H_ and W_ are not ints
+
+  # Calculate x_col using the im2col helper function
+  x_col = im2col.im2col_indices(x, HH, WW, pad, stride)
+
+  # Calculate w_row using the im2col helper function
+  w_row = im2col.im2col_indices(w, HH, WW, 0, 1).T
+
+  # Pad out x_col with ones so we can use the bias trick
+  x_col_1 = np.vstack((x_col, np.ones(x_col.shape[-1])))
+
+  # Pad out w_row with the bias term b
+  w_row_1 = np.vstack((w_row.T, b)).T
+
+  # Perform the convolution 
+  out_ = np.dot(w_row_1, x_col_1)
+
+  # Reshape the output using the col2im helper function
+  out = im2col.col2im_indices(out_, (N,F,H_,W_), H_, W_)
+
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
