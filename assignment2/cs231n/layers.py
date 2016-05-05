@@ -551,6 +551,22 @@ def conv_backward_naive(dout, cache):
   #############################################################################
   # TODO: Implement the convolutional backward pass.                          #
   #############################################################################
+  x = cache[0]
+  w = cache[1]
+  b = cache[2]
+  conv_param = cache[3]
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  (N, C, H, W) = x.shape
+  (F, C, HH, WW) = w.shape
+  
+  x_col = im2col.im2col_indices(x, HH, WW, pad, stride)
+  w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1).T
+
+  # dx = dout.dot(w.T).reshape(x.shape)
+  # dw = x.reshape(x.shape[0], -1).T.dot(dout)
+  # db = dout.sum(axis=0)
+  
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
