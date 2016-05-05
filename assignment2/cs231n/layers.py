@@ -512,7 +512,7 @@ def conv_forward_naive(x, w, b, conv_param):
   x_col = im2col.im2col_indices(x, HH, WW, pad, stride)
 
   # Calculate w_row using the im2col helper function
-  w_row = im2col.im2col_indices(w, HH, WW, 0, 1).T
+  w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1).T
 
   # Pad out x_col with ones so we can use the bias trick
   x_col_1 = np.vstack((x_col, np.ones(x_col.shape[-1])))
@@ -524,7 +524,7 @@ def conv_forward_naive(x, w, b, conv_param):
   out_ = np.dot(w_row_1, x_col_1)
 
   # Reshape the output using the col2im helper function
-  out = im2col.col2im_indices(out_, (N,F,H_,W_), H_, W_)
+  out = im2col.col2im_indices(out_, (N,F,H_,W_), field_height=H_, field_width=W_, padding=0, stride=1)
 
   pass
   #############################################################################
