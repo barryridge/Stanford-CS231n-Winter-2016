@@ -509,22 +509,22 @@ def conv_forward_naive(x, w, b, conv_param):
   # TODO: Add some exception throwing here if H_ and W_ are not ints
 
   # Calculate x_col using the im2col helper function
-  x_col = im2col.im2col_indices(x, HH, WW, pad, stride)
+  x_col = im2col.im2col_indices(x, HH, WW, padding=pad, stride=stride)
 
   # Calculate w_row using the im2col helper function
-  w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1).T
+  w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1)
 
   # Pad out x_col with ones so we can use the bias trick
   x_col_1 = np.vstack((x_col, np.ones(x_col.shape[-1])))
 
   # Pad out w_row with the bias term b
-  w_row_1 = np.vstack((w_row.T, b)).T
+  w_row_1 = np.vstack((w_row, b))
 
   # Perform the convolution 
-  out_ = np.dot(w_row_1, x_col_1)
+  out_ = np.dot(w_row_1.T, x_col_1)
 
   # Reshape the output using the col2im helper function
-  out = im2col.col2im_indices(out_, (N,F,H_,W_), field_height=H_, field_width=W_, padding=0, stride=1)
+  out = im2col.col2im_indices(out_, (N,F,H_,W_), field_height=1, field_width=1, padding=0, stride=1)
 
   pass
   #############################################################################
@@ -561,11 +561,17 @@ def conv_backward_naive(dout, cache):
   (F, C, HH, WW) = w.shape
   
   x_col = im2col.im2col_indices(x, HH, WW, pad, stride)
-  w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1).T
+  w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1)
 
-  # dx = dout.dot(w.T).reshape(x.shape)
-  # dw = x.reshape(x.shape[0], -1).T.dot(dout)
-  # db = dout.sum(axis=0)
+  dout_col = im2col.im2col_indices(dout, 1, 1, padding=0, stride=1)
+
+  dx_col = w_row.dot(dout_col)
+  dx = im2col.col2im_indices(dx_col, x.shape, field_height=HH, field_width=WW, padding=pad, stride=stride)
+
+  dw_row = x_col.dot(dout_col.T)
+  dw = im2col.col2im_indices(dw_row, w.shape, field_height=HH, field_width=WW, padding=0, stride=1)
+
+  db = np.sum(dout_col, axis=1)
   
   pass
   #############################################################################
