@@ -564,7 +564,7 @@ def conv_backward_naive(dout, cache):
   w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1)
 
   dout_col = im2col.im2col_indices(dout, 1, 1, padding=0, stride=1)
-
+  
   dx_col = w_row.dot(dout_col)
   dx = im2col.col2im_indices(dx_col, x.shape, field_height=HH, field_width=WW, padding=pad, stride=stride)
 
@@ -599,6 +599,31 @@ def max_pool_forward_naive(x, pool_param):
   #############################################################################
   # TODO: Implement the max pooling forward pass                              #
   #############################################################################
+  # Unpack params
+  (N, C, H, W) = x.shape
+  HH = pool_param['pool_height']
+  WW = pool_param['pool_width']
+  stride = pool_param['stride']
+
+  # Calculate H' and W'
+  H_ = 1 + (H - HH) / stride
+  W_ = 1 + (W - WW) / stride
+
+  # Calculate x_col using the im2col helper function
+  x_col = im2col.im2col_indices(x, HH, WW, padding=0, stride=stride)
+
+  # Reshape into pools over all channels
+  x_col_pools = x_col.T.reshape(-1, HH*WW).T
+
+  # Perform the max-pooling
+  out_maxpool = np.amax(x_col_pools, axis=0)
+
+  # Reshape into columns
+  out_maxpool_col = out_maxpool.reshape(-1, C).T
+
+  # Reshape the output using the col2im helper function
+  out = im2col.col2im_indices(out_maxpool_col, (N,C,H_,W_), field_height=1, field_width=1, padding=0, stride=1)
+
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
@@ -622,6 +647,13 @@ def max_pool_backward_naive(dout, cache):
   #############################################################################
   # TODO: Implement the max pooling backward pass                             #
   #############################################################################
+  x = cache[0]
+  pool_param = cache[1]
+  (N, C, H, W) = x.shape
+  HH = pool_param['pool_height']
+  WW = pool_param['pool_width']
+  stride = pool_param['stride']
+
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
