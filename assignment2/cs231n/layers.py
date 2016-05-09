@@ -560,17 +560,24 @@ def conv_backward_naive(dout, cache):
   (N, C, H, W) = x.shape
   (F, C, HH, WW) = w.shape
   
-  x_col = im2col.im2col_indices(x, HH, WW, pad, stride)
-  w_row = im2col.im2col_indices(w, HH, WW, padding=0, stride=1)
-
-  dout_col = im2col.im2col_indices(dout, 1, 1, padding=0, stride=1)
+  # Calculate x_col using the im2col helper function
+  x_col = im2col.im2col_indices(x, field_height=HH, field_width=WW, padding=pad, stride=stride)
   
+  # Calculate w_row using the im2col helper function
+  w_row = im2col.im2col_indices(w, field_height=HH, field_width=WW, padding=0, stride=1)
+
+  # Reshape the output gradient into col form
+  dout_col = im2col.im2col_indices(dout, field_height=1, field_width=1, padding=0, stride=1)
+  
+  # Calculate and reshape the dx gradient
   dx_col = w_row.dot(dout_col)
   dx = im2col.col2im_indices(dx_col, x.shape, field_height=HH, field_width=WW, padding=pad, stride=stride)
 
+  # Calculate and reshape the dw gradient
   dw_row = x_col.dot(dout_col.T)
   dw = im2col.col2im_indices(dw_row, w.shape, field_height=HH, field_width=WW, padding=0, stride=1)
 
+  # Calculate and reshape the db gradient
   db = np.sum(dout_col, axis=1)
   
   pass
@@ -616,7 +623,8 @@ def max_pool_forward_naive(x, pool_param):
   x_col_pools = x_col.T.reshape(-1, HH*WW).T
 
   # Perform the max-pooling
-  out_maxpool = np.amax(x_col_pools, axis=0)
+  switches = np.argmax(x_col_pools, axis=0)
+  out_maxpool = x_col_pools[switches, np.arange(x_col_pools.shape[-1])]
 
   # Reshape into columns
   out_maxpool_col = out_maxpool.reshape(-1, C).T
@@ -628,7 +636,7 @@ def max_pool_forward_naive(x, pool_param):
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
-  cache = (x, pool_param)
+  cache = (x, switches, pool_param)
   return out, cache
 
 
@@ -648,11 +656,33 @@ def max_pool_backward_naive(dout, cache):
   # TODO: Implement the max pooling backward pass                             #
   #############################################################################
   x = cache[0]
-  pool_param = cache[1]
+  switches = cache[1]
+  pool_param = cache[2]
   (N, C, H, W) = x.shape
   HH = pool_param['pool_height']
   WW = pool_param['pool_width']
   stride = pool_param['stride']
+  
+  # Calculate x_col using the im2col helper function
+  x_col = im2col.im2col_indices(x, field_height=HH, field_width=WW, padding=0, stride=stride)
+  
+  # Reshape into pools over all channels
+  x_col_pools = x_col.T.reshape(-1, HH*WW).T
+
+  # Reshape the output gradient into col form
+  dout_col = im2col.im2col_indices(dout, field_height=1, field_width=1, padding=0, stride=1)
+
+  # Since we're taking the gradient of a max function,
+  # we route the output gradient to the inputs that had
+  # the max values on the forward pass using the cached switches.
+  dx_col_pools = np.zeros(x_col_pools.shape)
+  dx_col_pools[switches, np.arange(dx_col_pools.shape[-1])] = dout_col.flatten()
+
+  # Reshape into col form
+  dx_col = dx_col_pools.reshape(x_col.shape)
+
+  # Finally, reshape dx_col
+  dx = im2col.col2im_indices(dx_col, x.shape, field_height=HH, field_width=WW, padding=0, stride=stride)
 
   pass
   #############################################################################
