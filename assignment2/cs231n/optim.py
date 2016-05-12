@@ -148,7 +148,7 @@ def adam(x, dx, config=None):
   # stored in config.                                                         #
   #############################################################################
   
-  # I messed this up initially by being ignorant of the bias-correction
+  # I messed this up initially by being ignorant of the bias-correcting
   # mt_hat and vt_hat terms.
   #
   # Credit to:
