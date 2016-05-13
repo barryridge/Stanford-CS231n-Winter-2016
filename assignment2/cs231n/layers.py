@@ -722,15 +722,25 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
   # version of batch normalization defined above. Your implementation should  #
   # be very short; ours is less than five lines.                              #
   #############################################################################
+  #
+  # Inelegant solution:
+  #
+  # (N, C, H, W) = x.shape
+  # cache = {}
+  # for c in np.arange(C):
+  #     cout,cache[c] = batchnorm_forward(x[:,c,:,:].reshape(N, H*W), gamma[c], beta[c], bn_param)
+  #     cout = cout.reshape(np.concatenate([[x.shape[0], 1], x.shape[2:]]))
+  #     if c == 0:
+  #       out = cout
+  #     else:
+  #       out = np.concatenate((out,cout),axis=1)
+  
+  #
+  # Elegant solution:
+  # 
   (N, C, H, W) = x.shape
-  cache = {}
-  for c in np.arange(C):
-      cout,cache[c] = batchnorm_forward(x[:,c,:,:].reshape(N, H*W), gamma[c], beta[c], bn_param)
-      cout = cout.reshape(np.concatenate([[x.shape[0], 1], x.shape[2:]]))
-      if c == 0:
-        out = cout
-      else:
-        out = np.concatenate((out,cout),axis=1)
+  out_,cache = batchnorm_forward(np.transpose(x, (0, 2, 3, 1)).reshape(N * H * W, C), gamma, beta, bn_param)
+  out = out_.reshape((N, H, W, C)).transpose((0, 3, 1, 2))
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
