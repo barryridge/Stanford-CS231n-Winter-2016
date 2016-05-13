@@ -771,14 +771,9 @@ def spatial_batchnorm_backward(dout, cache):
   # version of batch normalization defined above. Your implementation should  #
   # be very short; ours is less than five lines.                              #
   #############################################################################
-  # for c in np.arange(C):
-  #     dx_,_ = batchnorm_backward(, cache[c])
-  #     def batchnorm_backward(dout, cache):
-  #     cout = cout.reshape(np.concatenate([[x.shape[0], 1], x.shape[2:]]))
-  #     if c == 0:
-  #       out = cout
-  #     else:
-  #       out = np.concatenate((out,cout),axis=1)
+  (N, C, H, W) = dout.shape
+  dx_, dgamma, dbeta, = batchnorm_backward(np.transpose(dout, [0, 2, 3, 1]).reshape(N * H * W, C), cache)
+  dx = dx_.reshape((N, H, W, C)).transpose((0, 3, 1, 2))
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
