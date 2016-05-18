@@ -57,11 +57,11 @@ class ThreeLayerConvNet(object):
     self.params['b3'] = np.zeros(num_classes)
 
     # print "W1.shape = ", self.params['W1'].shape
-    # print "b1.shape = ", self.params['W1'].shape
+    # print "b1.shape = ", self.params['b1'].shape
     # print "W2.shape = ", self.params['W2'].shape
-    # print "b2.shape = ", self.params['W2'].shape
+    # print "b2.shape = ", self.params['b2'].shape
     # print "W3.shape = ", self.params['W3'].shape
-    # print "b3.shape = ", self.params['W3'].shape
+    # print "b3.shape = ", self.params['b3'].shape
 
     pass
     ############################################################################
