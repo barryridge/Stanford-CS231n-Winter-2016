@@ -16,6 +16,7 @@ class MultiLayerConvNet(object):
   """
   
   def __init__(self, input_dim=(3, 32, 32),
+               dropout=0, use_batchnorm=False,
                num_filters=32, filter_size=7,
                hidden_dim=100, num_classes=10, weight_scale=1e-3, reg=0.0,
                dtype=np.float32):
@@ -24,6 +25,9 @@ class MultiLayerConvNet(object):
     
     Inputs:
     - input_dim: Tuple (C, H, W) giving size of input data
+    - dropout: Scalar between 0 and 1 giving dropout strength. If dropout=0 then
+      the network should not use dropout at all.
+    - use_batchnorm: Whether or not the network should use batch normalization.
     - num_filters: Number of filters to use in the convolutional layer
     - filter_size: Size of filters to use in the convolutional layer
     - hidden_dim: Number of units to use in the fully-connected hidden layer
@@ -34,6 +38,8 @@ class MultiLayerConvNet(object):
     - dtype: numpy datatype to use for computation.
     """
     self.params = {}
+    self.use_batchnorm = use_batchnorm
+    self.use_dropout = dropout > 0
     self.reg = reg
     self.dtype = dtype
     
@@ -61,33 +67,50 @@ class MultiLayerConvNet(object):
     #
     (W_in, H_in, D_in) = (W, H, C)
     print "INPUT: [%dx%dx%d]  weights: 0" % (W_in, H_in, D_in)
+
     self.params['W' + str(i_layer)] = weight_scale * np.random.randn(K, C, F_conv, F_conv)
-    self.params['b' + str(i_layer)] = np.zeros(num_filters)
+    self.params['b' + str(i_layer)] = np.zeros(K)
+
+    if use_batchnorm:
+      self.params['gamma' + str(i_layer)] = np.ones(C)
+      self.params['beta' + str(i_layer)] = np.zeros(C)
+
     W_conv_out = 1 + (W_in - F_conv + (2 * P_conv)) / S_conv
     H_conv_out = 1 + (H_in - F_conv + (2 * P_conv)) / S_conv
     D_conv_out = K
     print "CONV: [%dx%dx%d]  weights: (%d*%d*%d)*%d" % (W_conv_out, H_conv_out, D_conv_out, F_conv, F_conv, C, K)
+
     W_pool_out = 1 + (W_conv_out - F_pool) / S_pool
     H_pool_out = 1 + (H_conv_out - F_pool) / S_pool
     D_pool_out = D_conv_out
     print "POOL: [%dx%dx%d]  weights: 0" % (W_pool_out, H_pool_out, D_pool_out)
+
     (W_out, H_out, D_out) = (W_pool_out, H_pool_out, D_pool_out)
+
     i_layer += 1
 
     #
     # CONV -> RELU -> POOL
     #
     (W_in, H_in, D_in) = (W_out, H_out, D_out)
+
     self.params['W' + str(i_layer)] = weight_scale * np.random.randn(K, D_in, F_conv, F_conv)
-    self.params['b' + str(i_layer)] = np.zeros(num_filters)
+    self.params['b' + str(i_layer)] = np.zeros(K)
+
+    if use_batchnorm:
+      self.params['gamma' + str(i_layer)] = np.ones(C)
+      self.params['beta' + str(i_layer)] = np.zeros(C)
+
     W_conv_out = 1 + (W_in - F_conv + (2 * P_conv)) / S_conv
     H_conv_out = 1 + (H_in - F_conv + (2 * P_conv)) / S_conv
     D_conv_out = K
     print "CONV: [%dx%dx%d]  weights: (%d*%d*%d)*%d" % (W_conv_out, H_conv_out, D_conv_out, F_conv, F_conv, D_in, K)
+
     W_pool_out = 1 + (W_conv_out - F_pool) / S_pool
     H_pool_out = 1 + (H_conv_out - F_pool) / S_pool
     D_pool_out = D_conv_out
     print "POOL: [%dx%dx%d]  weights: 0" % (W_pool_out, H_pool_out, D_pool_out)
+
     (W_out, H_out, D_out) = (W_pool_out, H_pool_out, D_pool_out)
     i_layer += 1
 
@@ -97,6 +120,11 @@ class MultiLayerConvNet(object):
     (W_in, H_in, D_in) = (W_out, H_out, D_out)
     self.params['W' + str(i_layer)] = weight_scale * np.random.randn(W_in * H_in * D_in, hidden_dim)
     self.params['b' + str(i_layer)] = np.zeros(hidden_dim)
+
+    if use_batchnorm:
+      self.params['gamma' + str(i_layer)] = np.ones(hidden_dim)
+      self.params['beta' + str(i_layer)] = np.zeros(hidden_dim)
+
     print "FC: [1x1x%d]  weights: %d*%d*%d*%d" % (hidden_dim, W_in, H_in, D_in, hidden_dim)
     i_layer += 1
 
@@ -105,11 +133,16 @@ class MultiLayerConvNet(object):
     #
     self.params['W' + str(i_layer)] = weight_scale * np.random.randn(hidden_dim, num_classes)
     self.params['b' + str(i_layer)] = np.zeros(num_classes)
+
     print "FC: [1x1x%d]  weights: %d*%d" % (num_classes, hidden_dim, num_classes)
     i_layer += 1
 
+    print
+    print
+
     # Find the number of layers
     num_layers = i_layer - 1
+    self.num_layers = num_layers
 
     # Print the layer shapes for debugging purposes
     # for i_layer in np.arange(1,num_layers+1):
@@ -120,6 +153,15 @@ class MultiLayerConvNet(object):
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
+    
+    # With batch normalization we need to keep track of running means and
+    # variances, so we need to pass a special bn_param object to each batch
+    # normalization layer. You should pass self.bn_params[0] to the forward pass
+    # of the first batch normalization layer, self.bn_params[1] to the forward
+    # pass of the second batch normalization layer, etc.
+    self.bn_params = []
+    if self.use_batchnorm:
+      self.bn_params = [{'mode': 'train'} for i in xrange(self.num_layers - 1)]
 
     for k, v in self.params.iteritems():
       self.params[k] = v.astype(dtype)
@@ -131,6 +173,17 @@ class MultiLayerConvNet(object):
     
     Input / output: Same API as TwoLayerNet in fc_net.py.
     """
+    X = X.astype(self.dtype)
+    mode = 'test' if y is None else 'train'
+    
+    # Set train/test mode for batchnorm params and dropout param since they
+    # behave differently during training and testing.
+    # if self.dropout_param is not None:
+    #   self.dropout_param['mode'] = mode   
+    if self.use_batchnorm:
+      for bn_param in self.bn_params:
+        bn_param[mode] = mode
+
     W1, b1 = self.params['W1'], self.params['b1']
     W2, b2 = self.params['W2'], self.params['b2']
     W3, b3 = self.params['W3'], self.params['b3']
@@ -145,9 +198,46 @@ class MultiLayerConvNet(object):
 
     scores = None
 
-    c1, conv_relu_pool_1_cache = conv_relu_pool_forward(X, W1, b1, conv_param, pool_param)
-    c2, conv_relu_pool_2_cache = conv_relu_pool_forward(c1, W2, b2, conv_param, pool_param)
-    h1, affine_relu_cache = affine_relu_forward(c2, W3, b3)
+    #
+    # CONV -> RELU -> POOL
+    #
+    if self.use_batchnorm: 
+      c1, conv_relu_pool_1_cache = conv_batchnorm_relu_pool_forward(X, W1, b1,
+                                                                    conv_param,
+                                                                    self.params['gamma1'],
+                                                                    self.params['beta1'],
+                                                                    self.bn_params[0],
+                                                                    pool_param)
+    else:
+      c1, conv_relu_pool_1_cache = conv_relu_pool_forward(X, W1, b1, conv_param, pool_param)
+
+    #
+    # CONV -> RELU -> POOL
+    #
+    if self.use_batchnorm:
+      c2, conv_relu_pool_2_cache = conv_batchnorm_relu_pool_forward(X, W2, b2,
+                                                                    conv_param,
+                                                                    self.params['gamma2'],
+                                                                    self.params['beta2'],
+                                                                    self.bn_params[1],
+                                                                    pool_param)
+    else:
+      c2, conv_relu_pool_2_cache = conv_relu_pool_forward(c1, W2, b2, conv_param, pool_param)
+
+    #
+    # FC -> RELU
+    #
+    if self.use_batchnorm:
+      h, affine_relu_cache = affine_batchnorm_relu_forward(c2, W3, b3, 
+                                                           self.params['gamma3'],
+                                                           self.params['beta3'],
+                                                           self.bn_params[2])
+    else:
+      h1, affine_relu_cache = affine_relu_forward(c2, W3, b3)
+
+    #
+    # FC -> SOFTMAX
+    #
     scores, softmax_cache = affine_forward(h1, W4, b4)
 
     pass
@@ -174,10 +264,41 @@ class MultiLayerConvNet(object):
     loss += 0.5 * self.reg * np.sum(W4 * W4)
     
     # Do the backwards pass
+
+    #
+    # FC -> SOFTMAX
+    #
     dh1, dW4, db4 = affine_backward(dscores, softmax_cache)
-    dc2, dW3, db3 = affine_relu_backward(dh1, affine_relu_cache)
-    dc1, dW2, db2 = conv_relu_pool_backward(dc2, conv_relu_pool_2_cache)
-    dx, dW1, db1 = conv_relu_pool_backward(dc1, conv_relu_pool_1_cache)
+
+    #
+    # FC -> RELU
+    #
+    if self.use_batchnorm:
+      dc2, dW3, db3, dgamma, dbeta = affine_batchnorm_relu_backward(dh1, affine_relu_cache)
+      grads['gamma3'] = dgamma
+      grads['beta3'] = dbeta
+    else:
+      dc2, dW3, db3 = affine_relu_backward(dh1, affine_relu_cache)
+    
+    #
+    # CONV -> RELU -> POOL
+    #
+    if self.use_batchnorm:
+      dc1, dW2, db2, dgamma, dbeta = conv_batchnorm_relu_pool_backward(dc2, conv_relu_pool_2_cache)
+      grads['gamma2'] = dgamma
+      grads['beta2'] = dbeta
+    else:
+      dc1, dW2, db2 = conv_relu_pool_backward(dc2, conv_relu_pool_2_cache)
+
+    #
+    # CONV -> RELU -> POOL
+    #
+    if self.use_batchnorm:
+      dx, dW1, db1, dgamma, dbeta = conv_batchnorm_relu_pool_backward(dc1, conv_relu_pool_1_cache)
+      grads['gamma1'] = dgamma
+      grads['beta1'] = dbeta
+    else:
+      dx, dW1, db1 = conv_relu_pool_backward(dc1, conv_relu_pool_1_cache)
     
     # Add regularization to the weight gradients
     dW1 += self.reg * W1
