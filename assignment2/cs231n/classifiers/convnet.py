@@ -72,8 +72,9 @@ class MultiLayerConvNet(object):
     self.params['b' + str(i_layer)] = np.zeros(K)
 
     if use_batchnorm:
-      self.params['gamma' + str(i_layer)] = np.ones(C)
-      self.params['beta' + str(i_layer)] = np.zeros(C)
+      # Should be K, which is the depth of the CONV layer
+      self.params['gamma' + str(i_layer)] = np.ones(K)
+      self.params['beta' + str(i_layer)] = np.zeros(K)
 
     W_conv_out = 1 + (W_in - F_conv + (2 * P_conv)) / S_conv
     H_conv_out = 1 + (H_in - F_conv + (2 * P_conv)) / S_conv
@@ -98,8 +99,9 @@ class MultiLayerConvNet(object):
     self.params['b' + str(i_layer)] = np.zeros(K)
 
     if use_batchnorm:
-      self.params['gamma' + str(i_layer)] = np.ones(C)
-      self.params['beta' + str(i_layer)] = np.zeros(C)
+      # Should be K, which is the depth of the CONV layer
+      self.params['gamma' + str(i_layer)] = np.ones(K)
+      self.params['beta' + str(i_layer)] = np.zeros(K)
 
     W_conv_out = 1 + (W_in - F_conv + (2 * P_conv)) / S_conv
     H_conv_out = 1 + (H_in - F_conv + (2 * P_conv)) / S_conv
@@ -215,7 +217,7 @@ class MultiLayerConvNet(object):
     # CONV -> RELU -> POOL
     #
     if self.use_batchnorm:
-      c2, conv_relu_pool_2_cache = conv_batchnorm_relu_pool_forward(X, W2, b2,
+      c2, conv_relu_pool_2_cache = conv_batchnorm_relu_pool_forward(c1, W2, b2,
                                                                     conv_param,
                                                                     self.params['gamma2'],
                                                                     self.params['beta2'],
@@ -228,7 +230,7 @@ class MultiLayerConvNet(object):
     # FC -> RELU
     #
     if self.use_batchnorm:
-      h, affine_relu_cache = affine_batchnorm_relu_forward(c2, W3, b3, 
+      h1, affine_relu_cache = affine_batchnorm_relu_forward(c2, W3, b3, 
                                                            self.params['gamma3'],
                                                            self.params['beta3'],
                                                            self.bn_params[2])
