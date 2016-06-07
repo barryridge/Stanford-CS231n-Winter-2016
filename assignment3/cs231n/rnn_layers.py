@@ -108,6 +108,20 @@ def rnn_forward(x, h0, Wx, Wh, b):
   # input data. You should use the rnn_step_forward function that you defined  #
   # above.                                                                     #
   ##############################################################################
+
+  # Credit to https://github.com/saharshoza/cs231n-assignments for this solution,
+  # which is significantly more elegant than my initial attempt.
+
+  (N, T, D) = x.shape
+  H = h0.shape[1]
+  h_t = [h0] + [0]*T
+  cache = [0]*T
+
+  for t in np.arange(T):
+    h_t[t+1], cache[t] = rnn_step_forward(x[:,t,:], h_t[t], Wx, Wh, b)
+
+  h = np.dstack(h_t[1:]).transpose(0,2,1)
+
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
@@ -135,6 +149,23 @@ def rnn_backward(dh, cache):
   # sequence of data. You should use the rnn_step_backward function that you   #
   # defined above.                                                             #
   ##############################################################################
+  (N, T, H) = dh.shape
+  D = cache[0][4].shape[0]
+  dx_t = [0] * T
+  dWx = np.zeros([D,H])
+  dWh = np.zeros([H,H])
+  db = np.zeros([H,])
+  dh_t = np.zeros([N,H])
+
+  for t in np.arange(T-1,-1,-1):
+    dx_t[t], dh_t, dWx_t, dWh_t, db_t = rnn_step_backward(dh[:,t,:] + dh_t, cache[t])
+    dWx += dWx_t
+    dWh += dWh_t
+    db += db_t
+
+  dh0 = dh_t
+  dx = np.dstack(dx_t).transpose(0,2,1)  
+
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
