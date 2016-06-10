@@ -199,6 +199,8 @@ def word_embedding_forward(x, W):
   
   out = W[x, :]
 
+  cache = (V, x)
+
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
@@ -227,7 +229,25 @@ def word_embedding_backward(dout, cache):
   #                                                                            #
   # HINT: Look up the function np.add.at                                       #
   ##############################################################################
+  N, T, D = dout.shape
+  V, x = cache
+  dW = np.zeros([V,D])
 
+  # I found this to be a bit confusing at first.
+  #
+  # It can be a bit easier to comprehend if you step
+  # through updates for each data point in the following manner:
+  # np.add.at(dW, x[0,:], dout[0,:,:])
+  # np.add.at(dW, x[1,:], dout[1,:,:])
+  # etc.
+  # and observe how the gradients flow through to each word in dW.
+  #
+  # The following thread was also useful:
+  # https://www.reddit.com/r/cs231n/comments/48ndpi/problem_in_understanding_of_word_embedding/
+  #
+
+  np.add.at(dW, x, dout)
+  
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
