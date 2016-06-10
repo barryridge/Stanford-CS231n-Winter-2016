@@ -194,6 +194,14 @@ def word_embedding_forward(x, W):
   #                                                                            #
   # HINT: This should be very simple.                                          #
   ##############################################################################
+  N, T = x.shape
+  V, D = W.shape
+  out = np.zeros([N, T, D])
+  
+  for n in np.arange(N):
+    for t in np.arange(T):
+      out[n, t, :] = W[x[n, t], :]
+
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
