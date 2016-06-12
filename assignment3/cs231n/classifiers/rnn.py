@@ -135,6 +135,54 @@ class CaptioningRNN(object):
     # defined above to store loss and gradients; grads[k] should give the      #
     # gradients for self.params[k].                                            #
     ############################################################################
+    N, D = features.shape
+    T = captions.shape[1]
+    H = self.params['Wh'].shape[0]
+
+    # (1)
+    h0, affine_cache = affine_forward(features, W_proj, b_proj)
+
+    # (2)
+    word_vecs, word_embed_cache = word_embedding_forward(captions_in, W_embed)
+
+    # (3)
+    h, rnn_cache = rnn_forward(word_vecs, h0, Wx, Wh, b)
+
+    # (4)
+    scores, temporal_affine_cache = temporal_affine_forward(h, W_vocab, b_vocab)
+
+    # (5)
+    loss, dout = temporal_softmax_loss(scores, captions_out, mask)
+
+    # (4) backprop into h, Wh_vocab, b_vocab
+    dh, dW_vocab, db_vocab = temporal_affine_backward(dout, temporal_affine_cache)
+    
+    # (3) backprop into word_vecs, h0, Wx, Wh, b
+    dword_vecs, dh0, dWx, dWh, db = rnn_backward(dh, rnn_cache)
+
+    # (2) backprop into W_embed
+    dW_embed = word_embedding_backward(dword_vecs, word_embed_cache)
+    
+    # (1) backprop into W_proj, b_proj
+    dfeatures, dW_proj, db_proj = affine_backward(dh0, affine_cache)
+   
+
+    # Word vectors
+    grads['W_embed'] = dW_embed
+    
+    # CNN -> hidden state projection parameters
+    grads['W_proj'] = dW_proj
+    grads['b_proj'] = db_proj
+
+    # Parameters for the RNN
+    grads['Wx'] = dWx
+    grads['Wh'] = dWh
+    grads['b'] = db
+    
+    # Initialize output to vocab weights
+    grads['W_vocab'] = dW_vocab
+    grads['b_vocab'] = db_vocab
+    
     pass
     ############################################################################
     #                             END OF YOUR CODE                             #
