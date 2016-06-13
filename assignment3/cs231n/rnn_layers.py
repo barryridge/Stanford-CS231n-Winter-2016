@@ -194,7 +194,6 @@ def word_embedding_forward(x, W):
   #                                                                            #
   # HINT: This should be very simple.                                          #
   ##############################################################################
-  N, T = x.shape
   V, D = W.shape
   
   out = W[x, :]
